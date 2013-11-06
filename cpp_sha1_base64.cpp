@@ -47,8 +47,11 @@ int main(int argc, char const *argv[])
 	string encoded = base64_encode(reinterpret_cast<const unsigned char*>( sha1 ), len );
 	cout << "原先('scott' sha1 then base64): " << encoded << endl;
 
-	cout << endl << "以下為 Python: " << endl;
-	system("python python_base64_sha1.py");
+	try{
+		cout << endl << "以下為 Python: " << endl;
+		system("python python_base64_sha1.py");
+	}
+	catch(const char* message){}
 
 	return 0;
 }
