@@ -5,7 +5,7 @@
 // To change the template use AppCode | Preferences | File Templates.
 //
 
-
+#define hexValue (unsigned int)(unsigned char)
 
 #ifndef __TCPServer_H_
 #define __TCPServer_H_
@@ -23,6 +23,20 @@
 #include <math.h>		// 指數函數
 
 namespace network {
+
+	// 定義一個 WebSocket Header
+	typedef struct webSocketHeader {
+		unsigned int fin;
+		unsigned int rsv1;
+		unsigned int rsv2;
+		unsigned int rsv3;
+		unsigned int opcode;
+		unsigned int mask;
+		unsigned int payload_len;
+		unsigned long int ext_payload_len;
+		unsigned char mask_key[4];
+	} wsh;
+
 	using namespace std;
 
 	class TCPServer{
@@ -34,7 +48,6 @@ namespace network {
 			static void* threadFunc(void *argc);
 			static void clientTaker(int socketFileDescriptor);// root of the WebServer used to deal with client connections
 			static int currentSocketDescriptor;
-
 	};
 
 	const int BUFFSIZE = 1024;
@@ -64,7 +77,7 @@ namespace network {
 
 		int offset=7;
 
-		unsigned char opcode[1];	// 只用到 4 個bit
+		wsh twsh;
 
 		string header("");
 		while(true){
@@ -86,8 +99,7 @@ namespace network {
 						"Upgrade: websocket\r\n"
 						"Connection: Upgrade\r\n"
 						"Sec-WebSocket-Accept: "+sha1_then_base64(key)+"\r\n"
-						"Sec-WebSocket-Origin: null\r\n"
-						"Sec-WebSocket-Location: ws://127.0.0.1:1239/\r\n\r\n"
+						"Sec-WebSocket-Origin: null\r\n\r\n"
 					);
 
 					cout << res << endl;
@@ -100,43 +112,51 @@ namespace network {
 					// WebSocket 連線成功這邊開始解讀 Data Frame
 
 					offset=7;	// set offset
-					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; //  fin
-					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; // rsv1
-					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; // rsv2
-					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; // rsv3
-					cout << ( (buffer[0] && 15 ) ) << endl;offset-=1; // Opcode
-				};
+					cout << "fin:  " << ( twsh.fin=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; //  fin
+					cout << "rsv1: " << ( twsh.rsv1=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv1
+					cout << "rsv2: " << ( twsh.rsv2=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv2
+					cout << "rsv3: " << ( twsh.rsv3=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv3
+					cout << "Opcode: " << ( twsh.opcode=( (buffer[0] & 15 ) ) ) << endl;offset-=1; // opcode
 
-				bzero(buffer, sizeof(buffer));
+					offset=7;
+					cout << "mask: " << ( twsh.mask=(buffer[1] & (unsigned int)pow(2,offset))>>offset ) << endl;offset-=1; // mask
+					twsh.payload_len=(unsigned int)(buffer[1] & 127); // payload len
+
+					// 
+					if(twsh.payload_len<=125){
+						cout << "payload len: <= 125: " << twsh.payload_len << endl;
+						// data store
+						char *data=new char[twsh.payload_len];
+
+						for(int i=0;i<twsh.payload_len;i++){
+							if(twsh.mask==1 && i<=3){
+								twsh.mask_key[i]=(char)hexValue buffer[2+i];
+								data[twsh.payload_len-1]=(char)hexValue buffer[2+twsh.payload_len-1];
+								cout << "mask-key: " << 2+twsh.payload_len-1 << endl;
+							}
+							else{
+								data[i]=(char)hexValue buffer[2+i-1];
+							}
+							cout << 2+i << "->hex: " << hex << hexValue buffer[2+i] << endl;
+						};
+					}
+					// 
+					else if(twsh.payload_len==126){
+						cout << "payload len: == 126: " << twsh.payload_len << endl;
+					}
+					// 
+					else if(twsh.payload_len==127){
+						cout << "payload len: == 127: " << twsh.payload_len << endl;
+					}
+				};
 			}
 			else{
 				// system("sleep 0.01");		// 避免系統爆掉
 			}
+
+			bzero(buffer, sizeof(buffer));
 			received = recv(socketFileDescriptor, buffer, BUFFSIZE, 0);
 		}
-
-		// 	if (received >= 0) {
-		// 		if(0 > (received = recv(socketFileDescriptor, buffer, BUFFSIZE, 0))){
-		// 			//printf("Error getting info from FD");
-		// 			//close(socketFileDescriptor);
-		// 			//return ;
-		// 		}
-		// 		if(strcmp(buffer,"BYE")==0){
-		// 			strcpy(msg,"BYE_BYE");
-		// 			send(socketFileDescriptor,msg,BUFFSIZE,0);
-		// 			//return ;
-		// 		}
-		// 		std::cout<<buffer;
-		// 		bzero(buffer, sizeof(buffer));
-		// 		if (send(socketFileDescriptor, msg, BUFFSIZE, 0)<0){
-		// 			printf("Error writing to socket");
-		// 			//close(socketFileDescriptor);
-		// 			//return ;
-		// 		}
-		// 	}
-		// }
-		// close(socketFileDescriptor);
-		
 	}
 	void* TCPServer::threadFunc(void *argc){
 		clientTaker(TCPServer::currentSocketDescriptor);
