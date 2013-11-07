@@ -20,6 +20,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <math.h>		// 指數函數
 
 namespace network {
 	using namespace std;
@@ -61,16 +62,18 @@ namespace network {
 
 		bool websocket_handle=true;
 
+		int offset=7;
+
+		unsigned char opcode[1];	// 只用到 4 個bit
+
 		string header("");
 		while(true){
 			if (received > 0) {
-				header+=buffer;
-
-				cout << header << endl;
-				cout << header.size() << endl;
-
 				if(websocket_handle){
 					// WebSocket 通信協定實作
+					header+=buffer;
+					cout << header << endl;
+					cout << header.size() << endl;
 
 					size_t s=header.find("Sec-WebSocket-Key: ")+19;
 					size_t e=header.find("\n",s)-1;
@@ -96,6 +99,12 @@ namespace network {
 				else if(websocket_handle==false){
 					// WebSocket 連線成功這邊開始解讀 Data Frame
 
+					offset=7;	// set offset
+					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; //  fin
+					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; // rsv1
+					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; // rsv2
+					cout << ( (buffer[0] && pow(2,offset))>>offset ) << endl;offset-=1; // rsv3
+					cout << ( (buffer[0] && 15 ) ) << endl;offset-=1; // Opcode
 				};
 
 				bzero(buffer, sizeof(buffer));
