@@ -52,7 +52,7 @@ namespace network {
 			static int currentSocketDescriptor;
 	};
 
-	const int BUFFSIZE = 1024;
+	const int BUFFSIZE = 65536;
 	int TCPServer::currentSocketDescriptor;
 
 	// 實作對話內的調用方法
@@ -84,6 +84,9 @@ namespace network {
 		string header("");
 		while(true){
 			if (received > 0) {
+
+				cout << "recv bytes size is: " << hexValue received << endl;
+
 				if(websocket_handle){
 					// WebSocket 通信協定實作
 					header+=buffer;
@@ -149,6 +152,7 @@ namespace network {
 							};
 
 							// converted data
+							cout << "資料長度: " << twsh.payload_len.asNumber+1 << endl;
 							cout << "解析成功: " << data_converted << endl;
 						};
 					}
@@ -165,7 +169,6 @@ namespace network {
 						// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
 						for(int i=idx;i<2;i++){
 							twsh.payload_len.asBytes[1-i]=hexValue buffer[offset+i];;
-							cout << "hex: " << hex << hexValue buffer[offset+i] << endl;
 						}
 
 						unsigned char *mask_key=new unsigned char[4];
@@ -187,6 +190,7 @@ namespace network {
 						};
 
 						// converted data
+						cout << "資料長度: " << twsh.payload_len.asNumber+1 << endl;
 						cout << "解析成功: " << data_converted << endl;
 					}
 					// 
@@ -202,7 +206,6 @@ namespace network {
 						// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
 						for(int i=idx;i<8;i++){
 							twsh.payload_len.asBytes[7-i]=hexValue buffer[offset+i];;
-							cout << "hex: " << hex << hexValue buffer[offset+i] << endl;
 						}
 
 						cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
@@ -226,6 +229,7 @@ namespace network {
 						};
 
 						// converted data
+						cout << "資料長度: " << twsh.payload_len.asNumber+1 << endl;
 						cout << "解析成功: " << data_converted << endl;
 					}
 				};
