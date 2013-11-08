@@ -25,6 +25,7 @@
 namespace network {
 
 	// 定義一個 WebSocket Header
+	union payload_len_converter { unsigned long long int asNumber;unsigned char asBytes[8]; };
 	typedef struct webSocketHeader {
 		unsigned int fin;
 		unsigned int rsv1;
@@ -32,9 +33,10 @@ namespace network {
 		unsigned int rsv3;
 		unsigned int opcode;
 		unsigned int mask;
-		unsigned int payload_len;
-		unsigned long int ext_payload_len;
+		// unsigned long long int payload_len;
+		payload_len_converter payload_len;
 		unsigned char mask_key[4];
+		
 	} wsh;
 
 	using namespace std;
@@ -112,7 +114,7 @@ namespace network {
 					// WebSocket 連線成功這邊開始解讀 Data Frame
 
 					offset=7;	// set offset
-					cout << "fin:  " << ( twsh.fin=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; //  fin
+					cout << "fin:  " << ( twsh.fin=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; //  fin, 還需要判斷是不是最後一個包
 					cout << "rsv1: " << ( twsh.rsv1=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv1
 					cout << "rsv2: " << ( twsh.rsv2=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv2
 					cout << "rsv3: " << ( twsh.rsv3=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv3
@@ -120,33 +122,111 @@ namespace network {
 
 					offset=7;
 					cout << "mask: " << ( twsh.mask=(buffer[1] & (unsigned int)pow(2,offset))>>offset ) << endl;offset-=1; // mask
-					twsh.payload_len=(unsigned int)(buffer[1] & 127); // payload len
+					twsh.payload_len.asNumber=(unsigned int)(buffer[1] & 127); // payload len
 
 					// 
-					if(twsh.payload_len<=125){
-						cout << "payload len: <= 125: " << twsh.payload_len << endl;
+					if(twsh.payload_len.asNumber<=125){
+						cout << "payload len: <= 125: " << twsh.payload_len.asNumber << endl;
 						// data store
-						char *data=new char[twsh.payload_len];
+						if(twsh.mask==1){
+							unsigned char *mask_key=new unsigned char[4];
+							unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
+							unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
+							data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
 
-						for(int i=0;i<twsh.payload_len;i++){
-							if(twsh.mask==1 && i<=3){
-								twsh.mask_key[i]=(char)hexValue buffer[2+i];
-								data[twsh.payload_len-1]=(char)hexValue buffer[2+twsh.payload_len-1];
-								cout << "mask-key: " << 2+twsh.payload_len-1 << endl;
-							}
-							else{
-								data[i]=(char)hexValue buffer[2+i-1];
-							}
-							cout << 2+i << "->hex: " << hex << hexValue buffer[2+i] << endl;
+							int offset=2;
+							int idx=0;
+							mask_key[idx]=buffer[offset+idx];idx++;
+							mask_key[idx]=buffer[offset+idx];idx++;
+							mask_key[idx]=buffer[offset+idx];idx++;
+							mask_key[idx]=buffer[offset+idx];idx++;
+
+							for(int i=0;i<twsh.payload_len.asNumber;i++){
+								int j=i % 4;
+								data[i]=buffer[offset+i+idx];
+								// 根據 data frame 解析方式實作
+								data_converted[i]=data[i]^mask_key[j];
+							};
+
+							// converted data
+							cout << "解析成功: " << data_converted << endl;
 						};
 					}
 					// 
-					else if(twsh.payload_len==126){
-						cout << "payload len: == 126: " << twsh.payload_len << endl;
+					else if(twsh.payload_len.asNumber==126){
+						cout << "payload len: == 126: " << twsh.payload_len.asNumber << endl;
+
+						// 避免初始值導致錯誤
+						bzero(twsh.payload_len.asBytes,sizeof(twsh.payload_len.asBytes));
+
+						int offset=2;
+						int idx=0;
+
+						// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+						for(int i=idx;i<2;i++){
+							twsh.payload_len.asBytes[1-i]=hexValue buffer[offset+i];;
+							cout << "hex: " << hex << hexValue buffer[offset+i] << endl;
+						}
+
+						unsigned char *mask_key=new unsigned char[4];
+						unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
+						unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
+						data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
+
+						// get mask-key
+						mask_key[idx]=buffer[offset+idx+2];idx++;
+						mask_key[idx]=buffer[offset+idx+2];idx++;
+						mask_key[idx]=buffer[offset+idx+2];idx++;
+						mask_key[idx]=buffer[offset+idx+2];idx++;
+
+						for(int i=0;i<twsh.payload_len.asNumber;i++){
+							int j=i % 4;
+							data[i]=buffer[offset+i+idx+2];
+							// 根據 data frame 解析方式實作
+							data_converted[i]=data[i]^mask_key[j];
+						};
+
+						// converted data
+						cout << "解析成功: " << data_converted << endl;
 					}
 					// 
-					else if(twsh.payload_len==127){
-						cout << "payload len: == 127: " << twsh.payload_len << endl;
+					else if(twsh.payload_len.asNumber==127){
+						cout << "payload len: == 127: " << twsh.payload_len.asNumber << endl;
+
+						// 避免初始值導致錯誤
+						bzero(twsh.payload_len.asBytes,sizeof(twsh.payload_len.asBytes));
+
+						int offset=2;
+						int idx=0;
+
+						// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+						for(int i=idx;i<8;i++){
+							twsh.payload_len.asBytes[7-i]=hexValue buffer[offset+i];;
+							cout << "hex: " << hex << hexValue buffer[offset+i] << endl;
+						}
+
+						cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
+
+						unsigned char *mask_key=new unsigned char[4];
+						unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
+						unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
+						data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
+
+						// get mask-key
+						mask_key[idx]=buffer[offset+idx+8];idx++;
+						mask_key[idx]=buffer[offset+idx+8];idx++;
+						mask_key[idx]=buffer[offset+idx+8];idx++;
+						mask_key[idx]=buffer[offset+idx+8];idx++;
+
+						for(int i=0;i<twsh.payload_len.asNumber;i++){
+							int j=i % 4;
+							data[i]=buffer[offset+i+idx+8];
+							// 根據 data frame 解析方式實作
+							data_converted[i]=data[i]^mask_key[j];
+						};
+
+						// converted data
+						cout << "解析成功: " << data_converted << endl;
 					}
 				};
 			}
