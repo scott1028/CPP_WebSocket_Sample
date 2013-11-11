@@ -115,7 +115,8 @@ namespace network {
 
 		wsh twsh;
 
-		string header("");
+		string header("");			// 數據 header
+		string body("");			// 數據累積 body
 
 		while(true){
 			if (received > 0) {
@@ -146,21 +147,26 @@ namespace network {
 
 					send(socketFileDescriptor,res.c_str(),res.size(),0);
 
+					body.clear();
+
 					websocket_handle=false;
 				}
 				else if(websocket_handle==false){
 					// WebSocket 連線成功這邊開始解讀 Data Frame
 
+					// 數據累積
+					body+=buffer;
+
 					offset=7;	// set offset
-					cout << "fin:  " << ( twsh.fin=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; //  fin, 還需要判斷是不是最後一個包
-					cout << "rsv1: " << ( twsh.rsv1=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv1
-					cout << "rsv2: " << ( twsh.rsv2=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv2
-					cout << "rsv3: " << ( twsh.rsv3=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv3
-					cout << "opcode: " << ( twsh.opcode=( (buffer[0] & 15 ) ) ) << endl;offset-=1; // opcode
+					cout << "fin:  " << ( twsh.fin=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; //  fin, 還需要判斷是不是最後一個包
+					cout << "rsv1: " << ( twsh.rsv1=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv1
+					cout << "rsv2: " << ( twsh.rsv2=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv2
+					cout << "rsv3: " << ( twsh.rsv3=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv3
+					cout << "opcode: " << ( twsh.opcode=( (body.c_str()[0] & 15 ) ) ) << endl;offset-=1; // opcode
 
 					offset=7;
-					cout << "mask: " << ( twsh.mask=(buffer[1] & (unsigned int)pow(2,offset))>>offset ) << endl;offset-=1; // mask
-					twsh.payload_len.asNumber=(unsigned int)(buffer[1] & 127); // payload len
+					cout << "mask: " << ( twsh.mask=(body.c_str()[1] & (unsigned int)pow(2,offset))>>offset ) << endl;offset-=1; // mask
+					twsh.payload_len.asNumber=(unsigned int)(body.c_str()[1] & 127); // payload len
 
 					// 小型資料量調用
 					if(twsh.payload_len.asNumber<=125){
@@ -177,10 +183,10 @@ namespace network {
 							int mask_key_offset=0;
 
 							// 重新計算長度(here)
-							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
+							twsh.cal_payload_len(offset,idx,mask_key_offset,const_cast<char*>( body.c_str() ));
 
 							// 解析資料
-							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
+							twsh.data_parser(data,const_cast<char*>( body.c_str() ),offset,idx,mask_key_offset,data_converted);
 						};
 					}
 					// 中等資料量調用(會有問題) 65536<=
@@ -194,16 +200,17 @@ namespace network {
 							int idx=0;
 							int mask_key_offset=2;
 
-							// // 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
-							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
+							// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+							twsh.cal_payload_len(offset,idx,mask_key_offset,const_cast<char*>( body.c_str() ));
 
+							// 當資料準備完成後再 Parser, 計算 Payload length vs buffer
 							unsigned char *mask_key=new unsigned char[4];
 							unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
 							unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
 							data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
 
 							// 解析資料
-							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
+							twsh.data_parser(data,const_cast<char*>( body.c_str() ),offset,idx,mask_key_offset,data_converted);
 						};
 					}
 					// 當資料非常大的時候調用(有問題) >65536
@@ -217,16 +224,19 @@ namespace network {
 							int idx=0;
 							int mask_key_offset=8;
 
-							// // 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
-							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
+							// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);//const_cast<char*>( body.c_str() ));
 
+							cout << twsh.payload_len.asNumber << endl;
+
+							// 當資料準備完成後再 Parser, 計算 Payload length vs buffer
 							unsigned char *mask_key=new unsigned char[4];
 							unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
 							unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
 							data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
 
 							// 解析資料
-							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
+							twsh.data_parser(data,const_cast<char*>( body.c_str() ),offset,idx,mask_key_offset,data_converted);
 						};
 					}
 				};
@@ -235,6 +245,7 @@ namespace network {
 				// system("sleep 0.01");		// 避免系統爆掉
 			}
 
+			// 清空 Buffer
 			bzero(buffer, sizeof(buffer));
 			received = recv(socketFileDescriptor, buffer, BUFFSIZE, 0);
 		}
