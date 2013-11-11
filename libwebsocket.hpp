@@ -115,8 +115,6 @@ namespace network {
 
 		wsh twsh;
 
-		// twsh.data_parser();
-
 		string header("");
 
 		while(true){
@@ -185,11 +183,13 @@ namespace network {
 							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
 						};
 					}
-					// 中等資料量調用
+					// 中等資料量調用(會有問題) 65536<=
 					else if(twsh.payload_len.asNumber==126){
 						cout << "payload len: == 126: " << twsh.payload_len.asNumber << endl;
 
 						if(twsh.mask==1){
+							cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
+
 							int offset=2;
 							int idx=0;
 							int mask_key_offset=2;
@@ -206,19 +206,19 @@ namespace network {
 							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
 						};
 					}
-					// 當資料非常大的時候調用(有問題)
+					// 當資料非常大的時候調用(有問題) >65536
 					else if(twsh.payload_len.asNumber==127){
 						cout << "payload len: == 127: " << twsh.payload_len.asNumber << endl;
 
 						if(twsh.mask==1){
+							cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
+
 							int offset=2;
 							int idx=0;
 							int mask_key_offset=8;
 
 							// // 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
 							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
-
-							cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
 
 							unsigned char *mask_key=new unsigned char[4];
 							unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
