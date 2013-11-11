@@ -24,7 +24,7 @@
 
 namespace network {
 
-	// 定義一個 WebSocket Header
+	// 定義一個 WebSocket Header, struct 別名, 副程式
 	union payload_len_converter { unsigned long long int asNumber;unsigned char asBytes[8]; };
 	typedef struct webSocketHeader {
 		unsigned int fin;
@@ -33,9 +33,40 @@ namespace network {
 		unsigned int rsv3;
 		unsigned int opcode;
 		unsigned int mask;
-		// unsigned long long int payload_len;
 		payload_len_converter payload_len;
 		unsigned char mask_key[4];
+		void cal_payload_len(int offset,int idx,int mask_key_offset,char *buffer){
+			// 126 & 127 適用
+			if(payload_len.asNumber>125){
+				// 再度初始化
+				bzero(payload_len.asBytes,sizeof(payload_len.asBytes));
+				// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+				for(int i=idx;i<mask_key_offset;i++){
+					payload_len.asBytes[mask_key_offset-1-i]=hexValue buffer[offset+i];;
+				}
+			}
+			else{
+				// 不需要計算
+			}
+		};
+		void data_parser(unsigned char *data,char *buffer,int offset,int idx,unsigned int mask_key_offset,unsigned char *data_converted){
+
+			// get mask-key
+			mask_key[idx]=buffer[offset+idx+mask_key_offset];idx++;
+			mask_key[idx]=buffer[offset+idx+mask_key_offset];idx++;
+			mask_key[idx]=buffer[offset+idx+mask_key_offset];idx++;
+			mask_key[idx]=buffer[offset+idx+mask_key_offset];idx++;
+
+			for(int i=0;i<payload_len.asNumber;i++){
+				int j=i % 4;
+				data[i]=buffer[offset+i+idx+mask_key_offset];
+				// 根據 data frame 解析方式實作
+				data_converted[i]=data[i]^mask_key[j];
+			};
+
+			cout << "資料長度: " << payload_len.asNumber+1 << endl;
+			cout << "解析成功: " << data_converted << endl;
+		};
 		
 	} wsh;
 
@@ -70,10 +101,13 @@ namespace network {
 
 	// 實作對話
 	void TCPServer::clientTaker(int socketFileDescriptor){
-		char buffer[BUFFSIZE];
+		char buffer[BUFFSIZE];					// 第一圈等於 header 第二圈等於 body
+		bzero(buffer, sizeof(buffer));
+
 		int received = -1;
-		char msg[BUFFSIZE];
-		strcpy(msg, answer().c_str());
+
+		// char msg[BUFFSIZE];
+		// strcpy(msg, answer().c_str());
 
 		bool websocket_handle=true;
 
@@ -81,7 +115,10 @@ namespace network {
 
 		wsh twsh;
 
+		// twsh.data_parser();
+
 		string header("");
+
 		while(true){
 			if (received > 0) {
 
@@ -121,13 +158,13 @@ namespace network {
 					cout << "rsv1: " << ( twsh.rsv1=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv1
 					cout << "rsv2: " << ( twsh.rsv2=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv2
 					cout << "rsv3: " << ( twsh.rsv3=( (buffer[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv3
-					cout << "Opcode: " << ( twsh.opcode=( (buffer[0] & 15 ) ) ) << endl;offset-=1; // opcode
+					cout << "opcode: " << ( twsh.opcode=( (buffer[0] & 15 ) ) ) << endl;offset-=1; // opcode
 
 					offset=7;
 					cout << "mask: " << ( twsh.mask=(buffer[1] & (unsigned int)pow(2,offset))>>offset ) << endl;offset-=1; // mask
 					twsh.payload_len.asNumber=(unsigned int)(buffer[1] & 127); // payload len
 
-					// 
+					// 小型資料量調用
 					if(twsh.payload_len.asNumber<=125){
 						cout << "payload len: <= 125: " << twsh.payload_len.asNumber << endl;
 						// data store
@@ -139,98 +176,58 @@ namespace network {
 
 							int offset=2;
 							int idx=0;
-							mask_key[idx]=buffer[offset+idx];idx++;
-							mask_key[idx]=buffer[offset+idx];idx++;
-							mask_key[idx]=buffer[offset+idx];idx++;
-							mask_key[idx]=buffer[offset+idx];idx++;
+							int mask_key_offset=0;
 
-							for(int i=0;i<twsh.payload_len.asNumber;i++){
-								int j=i % 4;
-								data[i]=buffer[offset+i+idx];
-								// 根據 data frame 解析方式實作
-								data_converted[i]=data[i]^mask_key[j];
-							};
+							// 重新計算長度(here)
+							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
 
-							// converted data
-							cout << "資料長度: " << twsh.payload_len.asNumber+1 << endl;
-							cout << "解析成功: " << data_converted << endl;
+							// 解析資料
+							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
 						};
 					}
-					// 
+					// 中等資料量調用
 					else if(twsh.payload_len.asNumber==126){
 						cout << "payload len: == 126: " << twsh.payload_len.asNumber << endl;
 
-						// 避免初始值導致錯誤
-						bzero(twsh.payload_len.asBytes,sizeof(twsh.payload_len.asBytes));
+						if(twsh.mask==1){
+							int offset=2;
+							int idx=0;
+							int mask_key_offset=2;
 
-						int offset=2;
-						int idx=0;
+							// // 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
 
-						// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
-						for(int i=idx;i<2;i++){
-							twsh.payload_len.asBytes[1-i]=hexValue buffer[offset+i];;
-						}
+							unsigned char *mask_key=new unsigned char[4];
+							unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
+							unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
+							data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
 
-						unsigned char *mask_key=new unsigned char[4];
-						unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
-						unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
-						data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
-
-						// get mask-key
-						mask_key[idx]=buffer[offset+idx+2];idx++;
-						mask_key[idx]=buffer[offset+idx+2];idx++;
-						mask_key[idx]=buffer[offset+idx+2];idx++;
-						mask_key[idx]=buffer[offset+idx+2];idx++;
-
-						for(int i=0;i<twsh.payload_len.asNumber;i++){
-							int j=i % 4;
-							data[i]=buffer[offset+i+idx+2];
-							// 根據 data frame 解析方式實作
-							data_converted[i]=data[i]^mask_key[j];
+							// 解析資料
+							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
 						};
-
-						// converted data
-						cout << "資料長度: " << twsh.payload_len.asNumber+1 << endl;
-						cout << "解析成功: " << data_converted << endl;
 					}
-					// 
+					// 當資料非常大的時候調用(有問題)
 					else if(twsh.payload_len.asNumber==127){
 						cout << "payload len: == 127: " << twsh.payload_len.asNumber << endl;
 
-						// 避免初始值導致錯誤
-						bzero(twsh.payload_len.asBytes,sizeof(twsh.payload_len.asBytes));
+						if(twsh.mask==1){
+							int offset=2;
+							int idx=0;
+							int mask_key_offset=8;
 
-						int offset=2;
-						int idx=0;
+							// // 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
+							twsh.cal_payload_len(offset,idx,mask_key_offset,buffer);
 
-						// 先重新計算Payload Size, 要注意Intel是小端序排列, 下兩個 Bytes
-						for(int i=idx;i<8;i++){
-							twsh.payload_len.asBytes[7-i]=hexValue buffer[offset+i];;
-						}
+							cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
 
-						cout << "recal_payload_len: " << twsh.payload_len.asNumber << endl;
+							unsigned char *mask_key=new unsigned char[4];
+							unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
+							unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
+							data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
 
-						unsigned char *mask_key=new unsigned char[4];
-						unsigned char *data=new unsigned char[twsh.payload_len.asNumber];
-						unsigned char *data_converted=new unsigned char[twsh.payload_len.asNumber+1];
-						data_converted[twsh.payload_len.asNumber]='\0'; 	// 記得再補上一個 nil 當作結束(不然很容易領便當)
-
-						// get mask-key
-						mask_key[idx]=buffer[offset+idx+8];idx++;
-						mask_key[idx]=buffer[offset+idx+8];idx++;
-						mask_key[idx]=buffer[offset+idx+8];idx++;
-						mask_key[idx]=buffer[offset+idx+8];idx++;
-
-						for(int i=0;i<twsh.payload_len.asNumber;i++){
-							int j=i % 4;
-							data[i]=buffer[offset+i+idx+8];
-							// 根據 data frame 解析方式實作
-							data_converted[i]=data[i]^mask_key[j];
+							// 解析資料
+							twsh.data_parser(data,buffer,offset,idx,mask_key_offset,data_converted);
 						};
-
-						// converted data
-						cout << "資料長度: " << twsh.payload_len.asNumber+1 << endl;
-						cout << "解析成功: " << data_converted << endl;
 					}
 				};
 			}
