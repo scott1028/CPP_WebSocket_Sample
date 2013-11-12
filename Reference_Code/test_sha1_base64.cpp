@@ -1,4 +1,4 @@
-#include "lib/sha1_then_base64.hpp"
+#include "../lib/sha1_then_base64.hpp"
 
 using namespace std;
 using namespace network;
