@@ -1,5 +1,5 @@
-#include "sha1_and_base64/base64.hpp"
-#include "sha1_and_base64/TinySHA1.hpp"
+#include "sha1_then_base64/base64.hpp"
+#include "sha1_then_base64/TinySHA1.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
