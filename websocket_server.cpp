@@ -14,10 +14,10 @@ using namespace network;
 
 int main(int argc, const char * argv[])
 {
-	int portNo;
-	portNo = 8888;
-	TCPServer server(portNo);
-	server.run();
-	cout<<"Test";
+
+
+	int portNo=8888;
+	Websocket app=Websocket(portNo);
+	app.run();
 	return 0;
 }
