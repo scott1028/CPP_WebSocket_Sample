@@ -55,7 +55,7 @@ namespace network {
 					fd_and_mutex kk;
 					kk.newSocketFD=newSocketFD;
 
-					// 產生執行續, recv/send handle, // (void*)&newSocketFD
+					// 產生執行緒, recv/send handle, // (void*)&newSocketFD
 					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&kk ) ){	perror("Error creating thread"); };
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&kk ) ){	perror("Error creating thread"); };
 				}
