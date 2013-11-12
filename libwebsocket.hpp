@@ -92,7 +92,7 @@ namespace network {
 
 				listen(socketFD,5);
 				clientLength = sizeof(clientAdress);
-				while (1) {
+				while(true) {
 					int newSocketFD = accept(socketFD,(sockaddr *) &clientAdress, &clientLength);
 					if (newSocketFD < 0){
 						printf("Error acepting socket");
@@ -104,19 +104,8 @@ namespace network {
 					kk.newSocketFD=newSocketFD;
 
 					// 產生執行續, recv/send handle, // (void*)&newSocketFD
-					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&kk ) ){	perror("Error creating thread"); };
+					// if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&kk ) ){	perror("Error creating thread"); };
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&kk ) ){	perror("Error creating thread"); };
-
-					// Websocket::createThread( (void*)&newSocketFD );
-
-					// this->createThread( (void*)&newSocketFD );
-
-					// this->createThread( (void*)newSocketFD );
-
-					// // sender handler
-					// if( 0 != pthread_create(&thread, NULL, TCPServer::threadFunc, NULL) ){
-					// 	perror("Error creating thread");
-					// };
 				}
 				close(socketFD);
 			}
@@ -129,6 +118,7 @@ namespace network {
 				#include "recvThread.hpp"		// 實作很長寫在這吧, 神奇的寫法, include 就當作純文字輸入吧
 			}
 
+			// 要注意如果寄送非 WebSocket 封包給瀏覽器，將造成對方關閉連線這個執行續也會跳錯並將 fb 關閉, 導致另一個 recv Thread 也一併結束, 接著整個程式結束
 			static void* sendThread(void *fd){
 				// pthread_create 必須要是 static 或是 global 才能使用 pthread, 因為 instance method 會先 pass a hidden this pointer
 				// 所以裡面就寫通用結構即可
