@@ -61,12 +61,13 @@ namespace network {
 		
 	} wsh;
 
-	// fd_and_mutex
+	// FD 與 Mutex 的 Struct
 	struct fd_and_mutex{
 		pthread_mutex_t mutex;
 		int newSocketFD;
 	};
 
+	// WebSocket 的主類別實作與定義
 	class Websocket{
 		public:
 			Websocket(int port){
@@ -104,13 +105,15 @@ namespace network {
 					kk.newSocketFD=newSocketFD;
 
 					// 產生執行續, recv/send handle, // (void*)&newSocketFD
-					// if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&kk ) ){	perror("Error creating thread"); };
+					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&kk ) ){	perror("Error creating thread"); };
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&kk ) ){	perror("Error creating thread"); };
 				}
 				close(socketFD);
 			}
 		private:
+			// 伺服器端口
 			int port;
+
 			static void* recvThread(void *fd){
 				// pthread_create 必須要是 static 或是 global 才能使用 pthread, 因為 instance method 會先 pass a hidden this pointer
 				// 所以裡面就寫通用結構即可
