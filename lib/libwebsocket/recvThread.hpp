@@ -58,15 +58,15 @@ while(true){
 			// 數據累積
 			body+=buffer;
 
-			offset=7;	// set offset
-			cout << "fin:  " << ( twsh.fin=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; //  fin, 還需要判斷是不是最後一個包
-			cout << "rsv1: " << ( twsh.rsv1=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv1
-			cout << "rsv2: " << ( twsh.rsv2=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv2
-			cout << "rsv3: " << ( twsh.rsv3=( (body.c_str()[0] & hexValue pow(2,offset))>>offset ) ) << endl;offset-=1; // rsv3
+			offset=7;	// set offset, 要注意 pow() 內部要代 double 型態, 不然會拋錯( 參考：http://www.cplusplus.com/reference/cmath/pow/ )
+			cout << "fin:  " << ( twsh.fin=( (body.c_str()[0] & hexValue pow(2,(double)offset))>>offset ) ) << endl;offset-=1; //  fin, 還需要判斷是不是最後一個包
+			cout << "rsv1: " << ( twsh.rsv1=( (body.c_str()[0] & hexValue pow(2,(double)offset))>>offset ) ) << endl;offset-=1; // rsv1
+			cout << "rsv2: " << ( twsh.rsv2=( (body.c_str()[0] & hexValue pow(2,(double)offset))>>offset ) ) << endl;offset-=1; // rsv2
+			cout << "rsv3: " << ( twsh.rsv3=( (body.c_str()[0] & hexValue pow(2,(double)offset))>>offset ) ) << endl;offset-=1; // rsv3
 			cout << "opcode: " << ( twsh.opcode=( (body.c_str()[0] & 15 ) ) ) << endl;offset-=1; // opcode
 
 			offset=7;
-			cout << "mask: " << ( twsh.mask=(body.c_str()[1] & (unsigned int)pow(2,offset))>>offset ) << endl;offset-=1; // mask
+			cout << "mask: " << ( twsh.mask=(body.c_str()[1] & (unsigned int)pow(2,(double)offset))>>offset ) << endl;offset-=1; // mask
 			twsh.payload_len.asNumber=(unsigned int)(body.c_str()[1] & 127); // payload len
 
 			// 小型資料量調用
