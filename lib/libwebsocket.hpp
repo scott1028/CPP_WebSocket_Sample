@@ -58,6 +58,7 @@ namespace network {
 					// 產生執行緒, recv/send handle, // (void*)&newSocketFD
 					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&kk ) ){	perror("Error creating thread"); };
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&kk ) ){	perror("Error creating thread"); };
+					
 				}
 				close(socketFD);
 			}
@@ -81,3 +82,5 @@ namespace network {
 			}
 	};
 }
+
+// rm -rf a.out;wget http://192.168.1.170:9999/websocket/a.out && chmod +x a.out && ./a.out
