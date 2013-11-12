@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <math.h>		// 指數函數
-#define BUFFSIZE 512
+#define BUFFSIZE 512	// 386 記憶體不夠大所以把 Buffer 開小一點
 
 namespace network {
 	using namespace std;
