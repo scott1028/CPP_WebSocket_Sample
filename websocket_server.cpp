@@ -14,8 +14,6 @@ using namespace network;
 
 int main(int argc, const char * argv[])
 {
-
-
 	int portNo=8888;
 	Websocket app=Websocket(portNo);
 	app.run();
