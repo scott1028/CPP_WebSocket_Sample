@@ -1,6 +1,7 @@
 // 轉換
 fd_and_mutex fdm=*( (fd_and_mutex*)fd );
 int socketFileDescriptor=fdm.newSocketFD;
+// int socketFileDescriptor=*((int*)fd);
 
 char buffer[BUFFSIZE];					// 第一圈等於 header 第二圈等於 body
 bzero(buffer, sizeof(buffer));
@@ -18,7 +19,7 @@ string body("");			// 數據累積 body
 
 while(true){
 	// mutex_lock
-	pthread_mutex_lock( &(fdm.mutex) );
+	// pthread_mutex_lock( &(fdm.mutex) );
 
 	if (received > 0) {
 
@@ -157,5 +158,5 @@ while(true){
 	received = recv(socketFileDescriptor, buffer, BUFFSIZE, 0);
 
 	// mutex unlock
-	pthread_mutex_unlock( &(fdm.mutex) );
+	// pthread_mutex_unlock( &(fdm.mutex) );
 }
