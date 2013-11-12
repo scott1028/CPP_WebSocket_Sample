@@ -1,5 +1,5 @@
 #define hexValue (unsigned int)(unsigned char)
-#include "lib/sha1_then_base64.hpp"
+#include "sha1_then_base64.hpp"
 #include <iostream>
 #include <stdio.h>
 #include <unistd.h>
@@ -16,7 +16,7 @@ namespace network {
 	using namespace std;
 
 	// 定義需要的 struct
-	#include "dataFrame_and_mutexFD_definer.hpp"
+	#include "libwebsocket/dataFrame_and_mutexFD_definer.hpp"
 
 	// WebSocket 的主類別實作與定義
 	class Websocket{
@@ -69,7 +69,7 @@ namespace network {
 				// pthread_create 必須要是 static 或是 global 才能使用 pthread, 因為 instance method 會先 pass a hidden this pointer
 				// 所以裡面就寫通用結構即可
 
-				#include "recvThread.hpp"		// 實作很長寫在這吧, 神奇的寫法, include 就當作純文字輸入吧
+				#include "libwebsocket/recvThread.hpp"		// 實作很長寫在這吧, 神奇的寫法, include 就當作純文字輸入吧
 			}
 
 			// 要注意如果寄送非 WebSocket 封包給瀏覽器，將造成對方關閉連線這個執行續也會跳錯並將 fb 關閉, 導致另一個 recv Thread 也一併結束, 接著整個程式結束
@@ -77,7 +77,7 @@ namespace network {
 				// pthread_create 必須要是 static 或是 global 才能使用 pthread, 因為 instance method 會先 pass a hidden this pointer
 				// 所以裡面就寫通用結構即可
 
-				#include "sendThread.hpp"		// 實作很長寫在這吧, 神奇的寫法, include 就當作純文字輸入吧
+				#include "libwebsocket/sendThread.hpp"		// 實作很長寫在這吧, 神奇的寫法, include 就當作純文字輸入吧
 			}
 	};
 }
