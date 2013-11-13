@@ -44,6 +44,7 @@ namespace network {
 
 				listen(socketFD,5);
 				clientLength = sizeof(clientAdress);
+
 				while(true) {
 					int newSocketFD = accept(socketFD,(sockaddr *) &clientAdress, &clientLength);
 					if (newSocketFD < 0){
@@ -58,6 +59,7 @@ namespace network {
 					// 產生執行緒, recv/send handle, // (void*)&newSocketFD
 					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&fdm ) ){	perror("Error creating thread"); };
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&fdm ) ){	perror("Error creating thread"); };
+					// if( 0 != pthread_create(&thread_send, NULL, Websocket::testThread, (void*)&fdm ) ){	perror("Error creating thread"); };
 				}
 				close(socketFD);
 			}
@@ -79,6 +81,11 @@ namespace network {
 
 				#include "libwebsocket/sendThread.hpp"		// 實作很長寫在這吧, include 就當作純文字輸入吧
 			}
+
+			// 386板子似乎開啟 Thread 產生 Segmentation Fault
+			static void* testThread(void *fd){
+
+			};
 	};
 }
 

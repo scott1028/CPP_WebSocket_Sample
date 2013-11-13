@@ -1,10 +1,8 @@
-//
-//  main.cpp
-//  server
-//
-//  Created by Igor Mel. on 8/17/13.
-//  Copyright (c) 2013 Igor Mel.. All rights reserved.
-//
+/*
+	base C++ WebSocket Server for GCC 3.3+
+	compiler: gcc websocket_server.cpp -lstdc++ -Wall
+	Author: Scott
+*/
 
 #include <iostream>
 #include "lib/libwebsocket.hpp"
