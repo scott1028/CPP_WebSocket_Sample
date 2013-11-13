@@ -1,6 +1,6 @@
 /*
 	base C++ WebSocket Server for GCC 3.3+
-	compiler: gcc websocket_server.cpp -lstdc++ -Wall
+	compiler: gcc websocket_server.cpp -lstdc++ -lpthread -Wall
 	Author: Scott
 */
 
