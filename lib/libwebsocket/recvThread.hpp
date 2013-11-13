@@ -161,4 +161,4 @@ while(true){
 	// pthread_mutex_unlock( &(fdm.mutex) );
 }
 
-pthread_exit(NULL);	// 退出thread
+// pthread_exit(NULL);	// 退出thread

@@ -20,4 +20,4 @@ while(true){
 	sleep(1);
 }
 
-pthread_exit(NULL);	// 退出thread
+// pthread_exit(NULL);	// 退出thread
