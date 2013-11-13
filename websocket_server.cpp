@@ -2,6 +2,7 @@
 	base C++ WebSocket Server for GCC 3.3+
 	compiler: gcc websocket_server.cpp -lstdc++ -lpthread -Wall
 	Author: Scott
+	Work for Cygwin、Centos 6.2
 */
 
 #include <iostream>
