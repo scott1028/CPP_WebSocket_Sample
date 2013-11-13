@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <math.h>		// 指數函數
-#define BUFFSIZE 512	// 386 記憶體不夠大所以把 Buffer 開小一點
+#define BUFFSIZE 128	// 386 記憶體不夠大所以把 Buffer 開小一點
 
 namespace network {
 	using namespace std;
@@ -58,7 +58,9 @@ namespace network {
 
 					// 產生執行緒, recv/send handle, // (void*)&newSocketFD
 					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&fdm ) ){	perror("Error creating thread"); };
+					//pthread_detach();	// 類似 thread_join, 且不會產生 blocking 等執行敘結束才釋放資源
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&fdm ) ){	perror("Error creating thread"); };
+					//pthread_detach();	// 類似 thread_join, 且不會產生 blocking 等執行敘結束才釋放資源
 					// if( 0 != pthread_create(&thread_send, NULL, Websocket::testThread, (void*)&fdm ) ){	perror("Error creating thread"); };
 				}
 				close(socketFD);
@@ -70,6 +72,7 @@ namespace network {
 			static void* recvThread(void *fd){
 				// pthread_create 必須要是 static 或是 global 才能使用 pthread, 因為 instance method 會先 pass a hidden this pointer
 				// 所以裡面就寫通用結構即可
+				// pthread_detach(pthread_self());
 
 				#include "libwebsocket/recvThread.hpp"		// 實作很長寫在這吧, include 就當作純文字輸入吧
 			}
@@ -78,13 +81,15 @@ namespace network {
 			static void* sendThread(void *fd){
 				// pthread_create 必須要是 static 或是 global 才能使用 pthread, 因為 instance method 會先 pass a hidden this pointer
 				// 所以裡面就寫通用結構即可
+				// pthread_detach(pthread_self());
 
 				#include "libwebsocket/sendThread.hpp"		// 實作很長寫在這吧, include 就當作純文字輸入吧
 			}
 
 			// 386板子似乎開啟 Thread 產生 Segmentation Fault
 			static void* testThread(void *fd){
-
+				// pthread_detach(pthread_self());
+				// pthread_exit(NULL);	// 退出thread
 			};
 	};
 }

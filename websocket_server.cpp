@@ -1,5 +1,5 @@
 /*
-	base C++ WebSocket Server for GCC 3.3+
+	base C++ WebSocket Server for GCC 3.3+ ( windows, centos )；GCC 3.4.5 ( Linux CCT-Linux 2.6.18v2 )
 	compiler: gcc websocket_server.cpp -lstdc++ -lpthread -Wall
 	Author: Scott
 	Work for Cygwin、Centos 6.2
