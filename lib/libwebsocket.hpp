@@ -57,10 +57,12 @@ namespace network {
 					fdm.newSocketFD=newSocketFD;
 
 					// 產生執行緒, recv/send handle, // (void*)&newSocketFD
+					// 每收到一個使用者連線產生兩個執行續 sender 跟 receiver 來處理
 					if( 0 != pthread_create(&thread_recv, NULL, Websocket::recvThread, (void*)&fdm ) ){	perror("Error creating thread"); };
 					//pthread_detach();	// 類似 thread_join, 且不會產生 blocking 等執行敘結束才釋放資源
 					if( 0 != pthread_create(&thread_send, NULL, Websocket::sendThread, (void*)&fdm ) ){	perror("Error creating thread"); };
 					//pthread_detach();	// 類似 thread_join, 且不會產生 blocking 等執行敘結束才釋放資源
+					//
 					// if( 0 != pthread_create(&thread_send, NULL, Websocket::testThread, (void*)&fdm ) ){	perror("Error creating thread"); };
 				}
 				close(socketFD);
